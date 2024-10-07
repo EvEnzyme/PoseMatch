@@ -1,32 +1,10 @@
 import cv2
 import mediapipe as mp
 import numpy as np
+from angle_calculation import PoseAngle
+
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
-
-def calculate_angle(vector_a, vector_b, vector_c):
-    a = np.array(vector_a)
-    b = np.array(vector_b)
-    c = np.array(vector_c)
-
-    radians = np.arctan2(c[1]-b[1], c[0]-b[0]) - np.arctan2(a[1]-b[1], a[0]-b[0])
-    angle = np.abs(radians*180.0/np.pi)
-    
-    if angle > 180.0:
-        angle = 360-angle
-        
-    return angle
-
-def display_angle(image, angle, joint, frame_shape):
-    text = str(int(angle))
-    height, width, _ = frame_shape
-    position =  tuple(np.multiply(joint, [width, height]).astype(int))
-    font = cv2.FONT_HERSHEY_SIMPLEX
-    font_scale = 1
-    colour = (255, 255, 255)
-    thickness = 2
-    
-    cv2.putText(image, text, position, font, font_scale, colour, thickness, cv2.LINE_AA)
 
 def judge(angle, image, joint1, joint2, frame_shape, standard=90):
     height, width, _ = frame_shape
@@ -69,23 +47,12 @@ with mp_pose.Pose(min_detection_confidence=0.8, min_tracking_confidence=0.8) as 
         image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         
         # Extract landmarks
-        try:
+        if results.pose_landmarks:
+            
             landmarks = results.pose_landmarks.landmark
             
-            # Get coordinates
-            shoulder = [landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].x,landmarks[mp_pose.PoseLandmark.LEFT_SHOULDER.value].y]
-            elbow = [landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].x,landmarks[mp_pose.PoseLandmark.LEFT_ELBOW.value].y]
-            wrist = [landmarks[mp_pose.PoseLandmark.LEFT_WRIST.value].x,landmarks[mp_pose.PoseLandmark.LEFT_WRIST.value].y]
-            
-            # Calculate angle
-            angle = calculate_angle(shoulder, elbow, wrist)
-            
-            # Visualize angle
-            display_angle(image, angle, elbow, frame_shape)
-
-                       
-        except Exception as e:
-            print(e)
+            # Initialize the PoseAngle class (ensure class name matches)
+            player = PoseAngle(image, frame_shape, landmarks)
         
         
         # Render detections
@@ -95,7 +62,12 @@ with mp_pose.Pose(min_detection_confidence=0.8, min_tracking_confidence=0.8) as 
                                  )
         
         try:
-            judge(angle, image, elbow, wrist,frame_shape, standard=90)
+            judge(player.left_elbow_angle_val, image,
+                  player.left_elbow, player.left_wrist,
+                  frame_shape, standard=90)
+            judge(player.right_elbow_angle_val, image,
+                  player.right_elbow, player.right_wrist,
+                  frame_shape, standard=90)
         
         except Exception as e:
             print(e)
