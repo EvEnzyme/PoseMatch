@@ -21,8 +21,12 @@ def judge(angle, player_image, joint1, joint2, player_frame_shape, standard=90):
     G = max(0, 255 - colour_offset)
     line_colour = (0, G, R)  # has to be a tuple
 
-    # Draw the line between elbow and wrist
-    cv2.line(player_image, joint1_pixel, joint2_pixel, line_colour, 20)
+    if np.array_equal(joint1, np.zeros(2)) or np.array_equal(joint2, np.zeros(2)):
+         return
+    
+    else:
+        # Draw the line between elbow and wrist
+        cv2.line(player_image, joint1_pixel, joint2_pixel, line_colour, 20)
 
 # Open the csv file for reading inside the while loop later
 csv_file_path = 'demo_angles.csv'
@@ -80,7 +84,7 @@ with mp_pose.Pose(min_detection_confidence=0.8, min_tracking_confidence=0.8) as 
         
         # Extract landmarks
         try:
-        
+            
             landmarks = results.pose_landmarks.landmark
             
             # Initialize the PoseAngle class (ensure class name matches)
