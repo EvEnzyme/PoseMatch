@@ -3,6 +3,9 @@ import mediapipe as mp
 import numpy as np
 import csv
 from angle_calculation import PoseAngle
+from scoring import ScoringSystem
+
+demo_video = 'assets/Macarena.mp4'
 
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
@@ -37,7 +40,7 @@ csv_reader = list(csv.reader(csvfile)) # convert to list for direct indexing lat
 line_index = 1 # start index for reading the csv, =1 to skip the header
 
 # Capture the demo video
-demo_cap = cv2.VideoCapture('assets/demo_vid.mov')
+demo_cap = cv2.VideoCapture(demo_video)
 
 # Capture the player camera feed
 player_cap = cv2.VideoCapture(0)
@@ -92,30 +95,11 @@ with mp_pose.Pose(min_detection_confidence=0.8, min_tracking_confidence=0.8) as 
             # Render detections
             mp_drawing.draw_landmarks(player_image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
                                     mp_drawing.DrawingSpec(color=(0,0,240), thickness=5, circle_radius=10), 
-                                    mp_drawing.DrawingSpec(color=(255,255,255), thickness=5, circle_radius=5) 
-                                    )
+                                    mp_drawing.DrawingSpec(color=(255,255,255), thickness=5, circle_radius=5))
 
-            # read a line from the csv file
-            csv_row = csv_reader[line_index]
-
-            demo_left_elbow_angle = float(csv_row[0])  # Left elbow angle
-            demo_right_elbow_angle = float(csv_row[1])
-            demo_left_shoulder_angle = float(csv_row[2])
-            demo_right_shoulder_angle = float(csv_row[3])
-
-            # if gets judged every few beats, the standard that's passed into the judge function will need to change
-            judge(player.left_elbow_angle, player_image,
-                    player.left_elbow, player.left_wrist,
-                    player_frame_shape, standard=demo_left_elbow_angle)
-            judge(player.right_elbow_angle, player_image,
-                    player.right_elbow, player.right_wrist,
-                    player_frame_shape, standard=demo_right_elbow_angle)
-            judge(player.left_shoulder_angle, player_image,
-                    player.left_shoulder, player.left_elbow,
-                    player_frame_shape, standard=demo_left_shoulder_angle)
-            judge(player.right_shoulder_angle, player_image,
-                    player.right_shoulder, player.right_elbow,
-                    player_frame_shape, standard=demo_right_shoulder_angle)
+            scoring = ScoringSystem(csv_reader, line_index)
+            frame_score = scoring.get_frame_score(player, player_image, player_frame_shape)
+            print(frame_score)
 
 
         except Exception as e:

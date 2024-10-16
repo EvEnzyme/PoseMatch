@@ -5,11 +5,14 @@ import csv
 from angle_calculation import PoseAngle
 mp_drawing = mp.solutions.drawing_utils
 
+demo_video = 'assets/Macarena.mp4'
+total_score = 0
+
 # Initialize MediaPipe Pose
 mp_pose = mp.solutions.pose
 
 # Initialize video capture for demo video
-demo_cap = cv2.VideoCapture('assets/demo_vid.mov')
+demo_cap = cv2.VideoCapture(demo_video)
 angle_joints = ['left_elbow_angle', 'right_elbow_angle', 
                 'left_shoulder_angle', 'right_shoulder_angle',
                 'left_hip_angle', 'right_hip_angle',
@@ -68,6 +71,9 @@ with open('demo_angles.csv', 'w', newline='') as csv_file:
                 #                 player.left_ankle, player.right_ankle]
                 # Write angles to CSV
                 csv_writer.writerow(frame_angles)
+                
+                frame_score = player.get_angle_num() * 3
+                total_score += frame_score
             
             # Render detections
             mp_drawing.draw_landmarks(image, results.pose_landmarks, mp_pose.POSE_CONNECTIONS,
@@ -77,6 +83,7 @@ with open('demo_angles.csv', 'w', newline='') as csv_file:
         
         
         frame_index += 1
+        print(total_score)
 
 # Release capture
 demo_cap.release()

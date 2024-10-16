@@ -18,6 +18,7 @@ class PoseLandmark(Enum):
     RIGHT_ANKLE = 28
 
 class PoseAngle:
+
     def __init__(self, image, frame_shape, landmarks: list) -> None:
         self.landmarks = landmarks
         self.image = image
@@ -39,22 +40,6 @@ class PoseAngle:
         self.right_hip = self.get_landmark(PoseLandmark.RIGHT_HIP, self.visibility_threshold)
         self.right_knee = self.get_landmark(PoseLandmark.RIGHT_KNEE, self.visibility_threshold)
         self.right_ankle = self.get_landmark(PoseLandmark.RIGHT_ANKLE, self.visibility_threshold)
-
-        # for testing purposes, leave for now
-        # self.left_shoulder = self.landmarks[11].visibility
-        # self.left_elbow = self.landmarks[13].visibility
-        # self.left_wrist = self.landmarks[15].visibility
-        # self.left_hip = self.landmarks[23].visibility
-        # self.left_knee = self.landmarks[25].visibility
-        # self.left_ankle = self.landmarks[27].visibility
-
-        # # Right landmark coordinates
-        # self.right_shoulder = self.landmarks[12].visibility
-        # self.right_elbow = self.landmarks[14].visibility
-        # self.right_wrist = self.landmarks[16].visibility
-        # self.right_hip = self.landmarks[24].visibility
-        # self.right_knee = self.landmarks[26].visibility
-        # self.right_ankle = self.landmarks[28].visibility
 
         # Left joint angles
         self.left_elbow_angle = self.calculate_angle(self.left_shoulder, self.left_elbow, self.left_wrist)
@@ -80,7 +65,7 @@ class PoseAngle:
         self.display_angle(self.image, self.right_hip_angle, self.right_hip, self.frame_shape)
         self.display_angle(self.image, self.right_knee_angle, self.right_knee, self.frame_shape)
 
-        self.visible_angle_num = self.get_angle_num(self.visibility_threshold)
+        self.visible_angle_num = self.get_angle_num()
        
     def get_landmark(self, landmark_enum: PoseLandmark, threshold) -> list:
         """
@@ -136,7 +121,7 @@ class PoseAngle:
         
         cv2.putText(image, text, position, font, font_scale, colour, thickness, cv2.LINE_AA)
 
-    def get_angle_num(self, threshold) -> int:
+    def get_angle_num(self) -> int:
         """
         This function spit out the number of calculatable angles by checking the visibility of the 12 angles.
         If the visibility of an angle is less then 0.70, it is considered invisible and the angle that involves it is uncalculatabe
@@ -144,7 +129,7 @@ class PoseAngle:
         visible_joint_num = 0
         visible_angle_num = 8
         for enum in PoseLandmark:
-            if self.landmarks[enum.value].visibility > threshold:
+            if self.landmarks[enum.value].visibility > self.visibility_threshold:
                 visible_joint_num += 1
 
             else:
