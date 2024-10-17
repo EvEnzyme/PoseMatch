@@ -6,6 +6,7 @@ class ScoringSystem:
     def __init__(self, standard_file, line_index: int) -> None:
         self.angle_list = standard_file
         self.line_index = line_index
+        self.demo_total_score = 0
 
         self.standard_list = self.get_standard_list(standard_file, line_index)
         self.demo_left_elbow_angle = float(self.standard_list[0])  # Left elbow angle
@@ -98,3 +99,33 @@ class ScoringSystem:
         # total score is easily accessible, but I need to NOT compare the angle if it's "invisible",
         # lable it in some way?
     
+    def display_overall_performance(self, demo_total_score, player_total_score, player_image) -> None:
+
+        performance: str = None
+
+        if 0.75 * demo_total_score <= player_total_score <= demo_total_score:
+            performance = "CLASS S"
+        elif 0.5 * demo_total_score <= player_total_score < demo_total_score * 0.75:
+            performance = "CLASS A"
+        elif 0.25 * demo_total_score <= player_total_score < demo_total_score * 0.5:
+            performance = "CLASS B"
+        elif 0 <= player_total_score < demo_total_score * 0.25:
+            performance = "CLASS C"
+        else:
+            pass
+
+        font = cv2.FONT_HERSHEY_SIMPLEX
+        font_scale = 7
+        thickness = 20
+        color = (0, 255, 255)
+        
+         # Calculate position to center the text
+        (text_width, text_height), baseline = cv2.getTextSize(performance, font, font_scale, thickness)
+        x = (player_image.shape[1] - text_width) // 2
+        y = (player_image.shape[0] + text_height) // 2
+
+        cv2.putText(player_image, performance, (x, y), font, font_scale, color, thickness, cv2.LINE_AA)
+
+
+
+

@@ -2,6 +2,7 @@ import cv2
 import mediapipe as mp
 import numpy as np
 import csv
+import time
 from angle_calculation import PoseAngle
 from scoring import ScoringSystem
 
@@ -9,27 +10,6 @@ demo_video = 'assets/Macarena.mp4'
 
 mp_drawing = mp.solutions.drawing_utils
 mp_pose = mp.solutions.pose
-
-def judge(angle, player_image, joint1, joint2, player_frame_shape, standard=90):
-    height, width, _ = player_frame_shape
-    
-    # Convert normalized landmarks to pixel coordinates
-    joint1_pixel = tuple(np.multiply(joint1, [width, height]).astype(int))
-    joint2_pixel = tuple(np.multiply(joint2, [width, height]).astype(int))
-    
-    # Calculate color based on angle
-    unit = 255 // 50
-    colour_offset = abs(angle - standard) * unit
-    R = min(255, colour_offset)
-    G = max(0, 255 - colour_offset)
-    line_colour = (0, G, R)  # has to be a tuple
-
-    if np.array_equal(joint1, np.zeros(2)) or np.array_equal(joint2, np.zeros(2)):
-         return
-    
-    else:
-        # Draw the line between elbow and wrist
-        cv2.line(player_image, joint1_pixel, joint2_pixel, line_colour, 20)
 
 # Open the csv file for reading inside the while loop later
 csv_file_path = 'demo_angles.csv'
@@ -48,8 +28,58 @@ player_cap = cv2.VideoCapture(0)
 # declare a list to hold demo angles read from the csv file
 demo_angles = []
 
+player_total_score = 0
+demo_total_score = 12288 # got from running demo_vid_processing
+# TODO: automation in grabbing the demo_total_score
+
+def countdown(player_cap):
+    """
+    this function is for displaying a 3 second count down at the start of the camera feed
+    """
+    start_time = time.time()
+    countdown_secs = 3  # countdown from 3 seconds
+
+    while True:
+        ret_player, player_frame = player_cap.read()
+        if not ret_player:
+            break
+
+        player_frame = cv2.flip(player_frame, 1)
+        player_frame_shape = player_frame.shape
+
+        # Display countdown at the center of the player frame
+        elapsed_time = time.time() - start_time
+        remaining_time = countdown_secs - int(elapsed_time)
+
+        if remaining_time > 0:
+            text = str(remaining_time)
+            font = cv2.FONT_HERSHEY_SIMPLEX
+            font_scale = 7
+            thickness = 20
+            color = (0, 255, 255)  # yellow color for the countdown
+
+            # Calculate position to center the text
+            (text_width, text_height), baseline = cv2.getTextSize(text, font, font_scale, thickness)
+            x = (player_frame.shape[1] - text_width) // 2
+            y = (player_frame.shape[0] + text_height) // 2
+
+            cv2.putText(player_frame, text, (x, y), font, font_scale, color, thickness, cv2.LINE_AA)
+            cv2.imshow('Player Feed with Countdown', player_frame)
+        else:
+            break
+
+        if cv2.waitKey(10) & 0xFF == ord('q'):
+            break
+
+countdown(player_cap)
+
+
 ## Setup mediapipe instance
 with mp_pose.Pose(min_detection_confidence=0.8, min_tracking_confidence=0.8) as pose:
+
+    # Store the last frame of the demo video
+    last_demo_frame = None
+
     while player_cap.isOpened():
         ret_player, player_frame = player_cap.read()
 
@@ -58,10 +88,13 @@ with mp_pose.Pose(min_detection_confidence=0.8, min_tracking_confidence=0.8) as 
 
         # Handle demo video
         ret_demo, demo_frame = demo_cap.read()
-        if not ret_demo:
-            # If the demo video ends, reset the video capture (loop)
-            demo_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-            ret_demo, demo_frame = demo_cap.read()
+
+        if ret_demo:
+            last_demo_frame = demo_frame  # Keep track of the last available frame
+        else:
+            demo_frame = last_demo_frame  # If the demo video ends, keep showing the last frame
+
+
 
         # Resize demo video to fit in the top-left corner
         demo_frame_resized = cv2.resize(demo_frame, (810, 540))
@@ -100,16 +133,20 @@ with mp_pose.Pose(min_detection_confidence=0.8, min_tracking_confidence=0.8) as 
             scoring = ScoringSystem(csv_reader, line_index)
             frame_score = scoring.get_frame_score(player, player_image, player_frame_shape)
             print(frame_score)
+            player_total_score += frame_score
 
 
         except Exception as e:
             print(e)
 
-        # ensure that the line index for the csv file is not out of range
-        if line_index == len(csv_reader) - 1:
-                line_index = 1  # loop if reach end of file
-        else:
-            line_index += 1
+        # # ensure that the line index for the csv file is not out of range
+        # if line_index == len(csv_reader) - 1:
+        #         line_index = 1  # loop if reach end of file
+        # else:
+        line_index += 1
+        
+        if not ret_demo:
+            scoring.display_overall_performance(demo_total_score, player_total_score, player_image)
 
         cv2.imshow('Player Feed with Demo', player_image)
 
